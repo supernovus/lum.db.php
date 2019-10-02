@@ -1,0 +1,35 @@
+{
+  "name": "lum/lum-db",
+  "description": "Lum DB libraries",
+  "license": "MIT",
+  "authors":
+  [
+    {
+      "name": "Timothy Totten",
+      "email": "supernovus@gmail.com",
+      "role": "Original Author"
+    }
+  ],
+  "require":
+  {
+    "php": "^7.0",
+    "lum/lum-core": "^1.0 || dev-master"
+  },
+  "require-dev":
+  {
+    "lum/lum-test": "^2.1 || dev-master",
+    "ext-PDO": "*",
+    "mongodb/mongodb": "^1.2"
+  },
+  "autoload":
+  {
+    "psr-4":
+    {
+      "Lum\\DB\\": "lib"
+    }
+  },
+  "scripts":
+  {
+    "test": "lumtest"
+  }
+}
