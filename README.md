@@ -73,7 +73,13 @@ drop these libraries from this package, and bump the major version number.
 
 ## TODO
 
-Write some tests, using the SQLite PDO driver.
+Write some tests.
+
+I can write SQL generation tests that instead of performing actual queries
+against a database, simply return the SQL and data array that would have been
+passed. This only works with the PDO classes, not the MongoDB ones.
+
+I can also make some _live_ tests using the SQLite PDO driver.
 
 ## Official URLs
 
