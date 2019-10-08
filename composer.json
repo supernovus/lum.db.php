@@ -18,8 +18,11 @@
   "require-dev":
   {
     "lum/lum-test": "^2.1 || dev-master",
-    "ext-PDO": "*",
-    "mongodb/mongodb": "^1.2"
+    "ext-PDO": "*"
+  },
+  "suggest":
+  {
+    "mongodb/mongodb": "Use of the Mongo classes requires this"
   },
   "autoload":
   {
