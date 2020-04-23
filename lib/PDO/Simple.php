@@ -14,6 +14,45 @@ function map_fields ($fields)
 }
 
 /**
+ * A quick function to map SQL fields to placeholders.
+ * This version replaces any dots in the data name with underscores.
+ */
+function map_fields_join ($inData)
+{
+  $outData = [];
+  $refList = [];
+  foreach ($inData as $inKey => $inVal)
+  {
+    if (is_object($inVal) && $inVal instanceof Reference)
+    {
+      $outVal = "$inKey = " . $inVal->refName();
+      $refList[] = $inKey;
+    }
+    else
+    {
+      $outKey = str_replace('.', '_', $inKey);
+      $outVal = "$inKey = :$outKey";
+    }
+    $outData[] = $outVal;
+  }
+  return [$outData, $refList];
+}
+
+/**
+ * Generate WHERE data replacing any dots with underscores.
+ */
+function map_where_data_join ($inData)
+{
+  $outData = [];
+  foreach ($inData as $inKey => $inVal)
+  {
+    $outKey = str_replace('.', '_', $inKey);
+    $outData[$outKey] = $inVal;
+  }
+  return $outData;
+}
+
+/**
  * A comparitor for NULL values.
  */
 function map_nulls ($fields, $not=false)
@@ -123,7 +162,9 @@ class Simple
    * overrides the $keep_config option.
    *
    * You can also specify a 'noConnect' option, which if true, will prevent
-   * the initial database connection. When not connected to a database, 
+   * the initial database connection. When not connected to a database, all
+   * database methods (select, insert, etc.) will return an array containing
+   * the SQL string, and placeholder data.
    */
   public function __construct ($conf, $keep_config=false)
   {
@@ -214,6 +255,14 @@ class Simple
   }
 
   /**
+   * Are we connected to a database?
+   */
+  public function connected ()
+  {
+    return isset($this->db);
+  }
+
+  /**
    * Handle a DBO level error. Override as necessary.
    */
   protected function handle_db_error ($einfo, $context, $name='database')
@@ -298,9 +347,11 @@ class Simple
   public function select ($table, $opts=[])
   {
     $data = null;
+    $implicit_join = false;
     if (is_array($table))
     {
       $table = join(',', $table);
+      $implicit_join = true;
     }
     if (is_object($opts))
     {
@@ -376,7 +427,18 @@ class Simple
         if (count($keys) > 0)
         {
           $haskeys = true;
-          $where = map_fields($keys);
+          if ($implicit_join)
+          {
+            list($where, $refvals) = map_fields_join($data);
+            foreach ($refvals as $refval)
+            {
+              unset($data[$refval]);
+            }
+          }
+          else
+          {
+            $where = map_fields($keys);
+          }
           $sql  .= join(" AND ", $where);
         }
         if (count($nulls) > 0)
@@ -385,6 +447,10 @@ class Simple
             $sql .= ' AND ';
           $where = map_nulls($nulls);
           $sql  .= join(" AND ", $where);
+        }
+        if ($implicit_join)
+        {
+          $data = map_where_data_join($data);
         }
       }
       elseif (is_string($opts['where']))

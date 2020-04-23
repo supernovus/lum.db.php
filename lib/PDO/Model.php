@@ -2,6 +2,9 @@
 
 namespace Lum\DB\PDO;
 
+// TODO: make more things support the as_name table aliases.
+// TODO: persistent column aliases? [Might be useful.]
+
 /**
  * An object oriented database model library.
  */
@@ -29,6 +32,8 @@ abstract class Model implements \Iterator, \ArrayAccess
 
   public $default_value = null; // Fields will be set to this by default.
 
+  protected $as_name; // Optional AS name for implicit joins.
+
   protected $serialize_ignore = ['resultset']; // Ignore when serializing.
 
   const return_row = 1; // Return a proper Row object.
@@ -38,7 +43,7 @@ abstract class Model implements \Iterator, \ArrayAccess
   /**
    * Build a new Model object.
    */
-  public function __construct ($opts=array())
+  public function __construct ($opts=array(), $simpleInstance=null)
   {
     // Ensure our options are an array.
     if (is_string($opts))
@@ -48,7 +53,15 @@ abstract class Model implements \Iterator, \ArrayAccess
 
     // Build our Simple DB object.
     // It will throw an exception of there are missing parameters.
-    $this->db = new Simple($opts, true);
+    if (isset($simpleInstance) && $simpleInstance instanceof Simple)
+    {
+      $this->db = $simpleInstance;
+    }
+    else
+    {
+      $keepConfig = isset($opts['keepConfig']) ? $opts['keepConfig'] : true;
+      $this->db = new Simple($opts, $keepConfig);
+    }
 
     if (isset($this->coerce_boolean))
     {
@@ -131,11 +144,101 @@ abstract class Model implements \Iterator, \ArrayAccess
   }
 
   /**
-   * Return our table name.
+   * Return our table name. Unlike ref() this ALWAYS returns just the table
+   * name, with no AS statement!
    */
   public function get_table ()
   {
     return $this->table;
+  }
+
+  /**
+   * Return a reference name for use in implicit joins.
+   *
+   * @param string $colName (Optional) Name of the column we are referencing.
+   * @param string $asName (Optional) Alias name for the column.
+   *
+   * @return string  If $colName was passed, this will be our table name,
+   *                 or table alias, along with the column name, or column alias.
+   *
+   *                 If no $colName was passed, this will be the table name, or
+   *                 a string in "table_name AS table_alias".
+   *
+   *                 NOTE: The $asName passed here only ever applies to the
+   *                 column. If you want to set a table alias, see asName().
+   */ 
+  public function refName ($colName=null, $asName=null)
+  {
+    if (is_null($colName))
+    { // Get the reference name of our table.
+      if (isset($this->as_name))
+      {
+        return $this->table . ' AS '. $this->as_name;
+      }
+      else
+      {
+        return $this->table;
+      }
+    }
+    else
+    { // Get the reference name of a column, applying our table alias if set.
+      if (isset($this->as_name))
+      {
+        $ref = $this->as_name;
+      }
+      else
+      {
+        $ref = $this->table;
+      }
+      $ref .= '.' . $colName;
+      if (isset($asName))
+      {
+        $ref .= ' AS ' . $asName;
+      }
+      return $ref;
+    }
+  }
+
+  /**
+   * Return a Reference object representing a column in our table.
+   * Used in queries using implicit joins.
+   *
+   * @param string $column The column we are querying, may be an alias if used.
+   *
+   * @return Reference An instance of the Reference class.
+   */
+  public function refData ($column)
+  {
+    if (isset($this->as_name))
+    {
+      $table = $this->as_name;
+    }
+    else
+    {
+      $table = $this->table;
+    }
+    return new Reference($table, $column, $this);
+  }
+
+  /**
+   * Get or set the table alias name for implicit joins.
+   *
+   * @param string $name (Optional) If passed, set the alias name to this.
+   *
+   * @return mixed If $name was specified, returns $this, otherwise returns the
+   *               current table alias name.
+   */
+  public function asName ($name=null)
+  {
+    if (isset($name))
+    {
+      $this->as_name = $name;
+      return $this;
+    }
+    else
+    {
+      return $this->as_name;
+    }
   }
 
   /**
@@ -254,7 +357,7 @@ abstract class Model implements \Iterator, \ArrayAccess
       if (isset($pval))
         $opts['rawResults'] = $pval;
     }
-    if (!isset($query['single']) || !$query['single'])
+    if ($this->db->connected() && (!isset($query['single']) || !$query['single']))
     {
       return $this->getResults($query, $opts);
     }
@@ -262,13 +365,86 @@ abstract class Model implements \Iterator, \ArrayAccess
   }
 
   /**
+   * Generate an implicit join table array.
+   */
+  protected function implicit_join_tables ($inTables)
+  {
+    if (is_string($inTables))
+    { // A string list? Not common, but okay. Be careful with this!
+      if (strpos($inTables, $this->table) === FALSE)
+      {
+        $outTables = $this->refName() . ',' . $inTables;
+      }
+      else
+      {
+        $outTables = $inTables;
+      }
+    }
+    elseif (is_array($inTables))
+    { // Array list, this is the recommended approach.
+      $outTables = [$this->refName()];
+      foreach ($inTables as $inTable)
+      {
+        if (is_object($inTable) && is_callable([$inTable, 'refName']))
+        { // Another Model instance, this is the best.
+          $outTables[] = $inTable->refName();
+        }
+        elseif (is_string($inTable))
+        { // A hard coded table string, not recommended, but okay.
+          $outTables[] = $inTable;
+        }
+        else
+        {
+          error_log("Invalid implicit join table definition: ".serialize($inTable));
+        }
+      }
+    }
+    else
+    {
+      error_log("Invalid implicit join tables: ".serialize($inTables));
+      $outTables = $this->refName();
+    }
+
+    return $outTables;
+  }
+
+  /**
    * The underlying select wrapper.
    */
   public function selectQuery ($query=[], $opts=[])
   {
-    $result = $this->db->select($this->table, $query);
+    $table = null;
+    if (is_array($query) && isset($query['with']))
+    {
+      $table = $this->implicit_join_tables($query['with']);
+      if (!isset($query['cols']))
+      {
+        $query['cols'] = $this->refName() . '.*';
+      }
+    }
+    elseif (is_object($query))
+    {
+      $pval = get_query_property($query, 'with');
+      if (isset($pval))
+      {
+        $table = $this->implicit_join_tables($pval);
+      }
+      $pval = get_query_property($query, 'cols');
+      if (!isset($pval))
+      {
+        error_log("No 'cols' defined in Query but implicit join in use!");
+      }
+    }
+    if (!isset($table))
+    { // Get our table name from the ref() method.
+      $table = $this->refName();
+    }
+
+    $result = $this->db->select($table, $query);
     $raw = false;
-    if (isset($opts['rawRow']) && $opts['rawRow'])
+    if (!$this->db->connected())
+      $raw = true;
+    elseif (isset($opts['rawRow']) && $opts['rawRow'])
       $raw = true;
     elseif (is_array($query) && isset($query['rawRow']) && $query['rawRow'])
       $raw = true;
@@ -362,7 +538,10 @@ abstract class Model implements \Iterator, \ArrayAccess
    */
   public function insert ($row, $opts=[])
   { // Check for options.
-    list($stmt,$fielddata) = $this->db->insert($this->table, $row);
+    $res = $this->db->insert($this->table, $row);
+    if (!$this->db->connected()) return $res;
+
+    list($stmt,$fieldata) = $res;
     if (isset($opts['return']))
     {
       $pk = $this->primary_key;
