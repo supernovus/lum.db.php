@@ -541,7 +541,7 @@ abstract class Model implements \Iterator, \ArrayAccess
     $res = $this->db->insert($this->table, $row);
     if (!$this->db->connected()) return $res;
 
-    list($stmt,$fieldata) = $res;
+    list($stmt,$fielddata) = $res;
     if (isset($opts['return']))
     {
       $pk = $this->primary_key;
