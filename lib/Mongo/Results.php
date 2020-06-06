@@ -10,7 +10,8 @@ class Results implements \Iterator, \Countable
   protected $find_query = [];
   protected $find_opts  = [];
   protected $class_opts = [];
-  protected $results;
+  protected $cursor;
+  protected $iterator;
 
   public function __construct ($opts=[])
   {
@@ -30,38 +31,62 @@ class Results implements \Iterator, \Countable
     }
   }
 
+  public function getCursor ()
+  {
+    if (!isset($this->cursor))
+    {
+      $collection = $this->parent->get_collection();
+      $this->cursor = $collection->find($this->find_query, $this->find_opts);
+    }
+    return $this->cursor;
+  }
+
+  public function getIterator ()
+  {
+    if (!isset($this->iterator))
+    {
+      $this->iterator = new \IteratorIterator($this->getCursor());
+    }
+    return $this->iterator;
+  }
+
   public function count ()
   {
-    return count($this->results);
+    $collection = $this->parent->get_collection();
+    $count_opts = [];
+    foreach (['limit','skip'] as $opt)
+    {
+      if (isset($this->find_opts[$opt]))
+      {
+        $count_opts[$opt] = $this->find_opts[$opt];
+      }
+    }
+    return $collection->count($this->find_query, $count_opts);
   }
 
   public function rewind ()
   {
-    $data = $this->parent->get_collection();
-    $results = $data->find($this->find_query, $this->find_opts);
-    $results = new \IteratorIterator($results);
-    $results->rewind();
-    $this->results = $results;
+    $this->getIterator()->rewind();
   }
 
   public function current ()
   {
-    return $this->parent->wrapRow($this->results->current(), $this->class_opts);
+    return $this->parent->wrapRow($this->getIterator()->current(), $this->class_opts);
   }
 
   public function next ()
   {
-    $this->results->next();
+    $this->getIterator()->next();
   }
 
   public function key ()
   {
-    return $this->results->key();
+    return $this->getIterator()->key();
   }
 
   public function valid ()
   {
-    return $this->results->valid();
+    return $this->getIterator()->valid();
   }
 
 }
