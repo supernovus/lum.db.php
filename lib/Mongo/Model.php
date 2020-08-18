@@ -15,6 +15,10 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
 
   public $parent;
 
+  // The value Results::count() passes to Results::rowCount()
+  // This is set to true by default for backwards compatibility.
+  public $results_use_filtered_count = true;
+
   protected $childclass;
   protected $resultclass;
 

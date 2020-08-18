@@ -52,13 +52,21 @@ class Results implements \Iterator, \Countable
 
   public function count ()
   {
+    return $this->rowCount($this->parent->results_use_filtered_count);
+  }
+
+  public function rowCount ($filterCount=false)
+  {
     $collection = $this->parent->get_collection();
     $count_opts = [];
-    foreach (['limit','skip'] as $opt)
+    if ($filterCount)
     {
-      if (isset($this->find_opts[$opt]))
+      foreach (['limit','skip'] as $opt)
       {
-        $count_opts[$opt] = $this->find_opts[$opt];
+        if (isset($this->find_opts[$opt]))
+        {
+          $count_opts[$opt] = $this->find_opts[$opt];
+        }
       }
     }
     return $collection->count($this->find_query, $count_opts);

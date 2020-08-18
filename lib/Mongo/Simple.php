@@ -164,10 +164,14 @@ class Simple
       return $this->data;
     }
 
+#    error_log("get_collection(".json_encode($opts).")");
+
     if (isset($this->build_opts) && count($opts) == 0)
     {
       $opts = $this->build_opts;
     }
+
+#    error_log("get_collection::opts = ".json_encode($opts));
 
     if (isset($opts['collection']))
     {
