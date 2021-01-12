@@ -571,7 +571,7 @@ class Simple
     if ($this->debugging)
     {
       error_log("SQL: $sql");
-      error_log("Data: ".json_encode($data));
+      error_log("Data: ".serialize($data));
     }
 
     if (!isset($this->db))

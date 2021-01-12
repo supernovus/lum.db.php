@@ -47,13 +47,23 @@ class Item extends \Lum\DB\Child
         if ($field == $pk) continue; // Sanity check.
         $cdata[$field] = $data[$field];
       }
+
+      if ($this->clear_on_update)
+      { // Clear the modified data.
+        $this->modified_data = [];
+      }
+
       return $this->parent->save($data, ['$set'=>$cdata]);
     }
     else
     { // Insert a new row.
-      // Clear the modified data.
-      $this->modified_data = [];
       $results = $this->parent->save($data);
+
+      if ($this->clear_on_insert)
+      { // Clear the modified data.
+        $this->modified_data = [];
+      }
+
       if (is_object($results[1]) && $results[1]->isAcknowledged())
       {
         $newid = $results[1]->getInsertedId();

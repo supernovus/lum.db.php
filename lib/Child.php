@@ -22,6 +22,9 @@ abstract class Child implements \ArrayAccess
   protected $modified_data;    // Fields we have modified.
   protected $save_value;       // Used in batch operations.
 
+  protected $clear_on_update = true; // Clear modified_data on update()
+  protected $clear_on_insert = true; // Clear modified_data on insert()
+
   protected $primary_key = 'id';
 
   protected $strict_keys = false; // Change to true to force strict keys.
@@ -219,7 +222,7 @@ abstract class Child implements \ArrayAccess
     {
       $this->data[$name] = $value;
     }
-    $this->modified_data = array();
+    $this->modified_data = [];
   }
 
   /** 

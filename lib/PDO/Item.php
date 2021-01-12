@@ -51,6 +51,12 @@ class Item extends \Lum\DB\Child
       }
       $where = [$pk => $data[$pk]];
       $this->parent->update($where, $cdata);
+
+      if ($this->clear_on_update)
+      { // Clear the modified data.
+        $this->modified_data = [];
+      }
+
       return True;
     }
     else
@@ -73,8 +79,10 @@ class Item extends \Lum\DB\Child
       // Insert the row and get the new primary key.
       $newpk = $this->parent->insert($data, $opts);
 
-      // Clear the modified data.
-      $this->modified_data = [];
+      if ($this->clear_on_insert)
+      { // Clear the modified data.
+        $this->modified_data = [];
+      }
 
 #      error_log("save got new '$pk' value '$newpk'");
 
