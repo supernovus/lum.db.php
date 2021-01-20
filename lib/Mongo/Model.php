@@ -149,6 +149,12 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     return $this->wrapRow($result, $classopts);
   }
 
+  public function rowCount ($find=[], $findopts=[])
+  {
+    $data = $this->get_collection();
+    return $data->count($find, $findopts);
+  }
+
   public function getDocById ($id, $findopts=[], $classopts=[])
   {
     if (is_string($id))

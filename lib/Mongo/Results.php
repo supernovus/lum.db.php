@@ -57,7 +57,6 @@ class Results implements \Iterator, \Countable
 
   public function rowCount ($filterCount=false)
   {
-    $collection = $this->parent->get_collection();
     $count_opts = [];
     if ($filterCount)
     {
@@ -69,7 +68,7 @@ class Results implements \Iterator, \Countable
         }
       }
     }
-    return $collection->count($this->find_query, $count_opts);
+    return $this->parent->rowCount($this->find_query, $count_opts);
   }
 
   public function rewind ()
