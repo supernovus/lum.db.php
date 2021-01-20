@@ -114,7 +114,9 @@ abstract class Child implements \ArrayAccess
    */
   protected function db_field ($name, $strict=null)
   {
-    if (array_key_exists($name, $this->data))
+    if (is_array($this->data) && array_key_exists($name, $this->data))
+      return $name;
+    elseif (is_object($this->data) && isset($this->data->$name))
       return $name;
     elseif (array_key_exists($name, $this->aliases))
       return $this->aliases[$name];
