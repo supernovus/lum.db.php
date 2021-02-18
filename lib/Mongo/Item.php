@@ -9,7 +9,37 @@ class Item extends \Lum\DB\Child
 {
   use \Lum\Data\JSON;
 
+  /**
+   * The primary key field. Should never have to be changed for MongoDB
+   */
   protected $primary_key = '_id';
+
+  /**
+   * Default value for the $retBool parameter of the delete() method. 
+   */
+  protected $delete_return_boolean = false;
+
+  /**
+   * Default value for the 'returnBoolean' options of the save()
+   * and saveUpdates() methods.
+   */
+  protected $save_return_boolean = false;
+
+  /**
+   * Default value for the 'returnNewId' option of the save() method.
+   */
+  protected $save_return_new_id = false;
+
+  /**
+   * Return our data in BSON format.
+   *
+   * Override this if you have custom objects in use,
+   * or need to ensure certain fields are in the right format.
+   */
+  public function to_bson ($opts=[])
+  {
+    return $this->data;
+  }
 
   /**
    * Save our data back to the database.
@@ -23,19 +53,38 @@ class Item extends \Lum\DB\Child
    */
   public function save ($opts=[])
   {
+    if ($opts === true)
+      $opts = ['all'=>true];
+
     if (isset($opts['pk']))
       $pk = $opts['pk'];
     else
       $pk = $this->primary_key;
 
-    if (is_callable([$this, 'to_bson']))
-      $data = $this->to_bson($opts);
-    else
-      $data = $this->data;
+    $data = $this->to_bson($opts);
+
+    $retBool = isset($opts['returnBoolean'])
+      ? $opts['returnBoolean']
+      : $this->save_return_boolean;
+
+    $retId = isset($opts['returnNewId'])
+      ? $opts['returnNewId']
+      : $this->save_return_new_id;
 
     if (isset($data[$pk]) && !isset($this->modified_data[$pk]))
     { // Update an existing row.
+
+      if (isset($opts['all']) && $opts['all'])
+      { // A way to force save all data.
+        if ($this->clear_on_update)
+        {
+          $this->modified_data = [];
+        }
+        return $this->parent->save($data);
+      }
+
       if (count($this->modified_data)==0) return;
+
       $fields = array_keys($this->modified_data);
 #      error_log("<changed>".json_encode($fields)."</changed>");
       $cdata  = [];
@@ -53,37 +102,134 @@ class Item extends \Lum\DB\Child
         $this->modified_data = [];
       }
 
-      return $this->parent->save($data, ['$set'=>$cdata]);
+      $res = $this->parent->save($data, ['$set'=>$cdata]);
+      if ($retBool)
+      {
+        return $this->parent->result_ok($res, true, true);
+      }
+      return $res;
     }
     else
     { // Insert a new row.
-      $results = $this->parent->save($data);
+      $res = $this->parent->save($data);
 
       if ($this->clear_on_insert)
       { // Clear the modified data.
         $this->modified_data = [];
       }
 
+      $newId = $this->parent->get_insert_id($res);
+      if ($newId)
+      {
+        $this->data[$pk] = $newId;
+      }
+
+      if ($retId)
+      {
+        return $newId;
+      }
+      if ($retBool)
+      {
+        return isset($newId);
+      }
+
+      return $res;
+    }
+  }
+
+  /**
+   * Apply MongoDB update statements directly.
+   * This is not for general purpose usage.
+   */
+  public function saveUpdates ($updates, $opts=[])
+  {
+    $pk = $this->primay_key;
+
+    $data = $this->to_bson($opts);
+
+    if (isset($data[$pk]))
+    {
+      $retBool = isset($opts['returnBoolean'])
+        ? $opts['returnBoolean']
+        : false;
+
+      $results = $this->parent->save($data, $updates);
+
       if (is_object($results[1]) && $results[1]->isAcknowledged())
       {
-        $newid = $results[1]->getInsertedId();
-        if ($newid)
+        $refresh = isset($opts['refresh']) ? $opts['refresh'] : true;
+        if ($this->clear_on_update)
         {
-          $this->data[$pk] = $newid;
+          $this->modified_data = [];
         }
+        if ($refresh)
+        {
+          $this->refresh();
+          $results[2] = $this->to_bson($opts);
+        }
+        if (isset($opts['onUpdated']) && is_callable($opts['onUpdated']))
+        {
+          call_user_func($opts['onUpdated'], $results, $data, $updates);
+        }
+        $success = true;
       }
+      else
+      {
+        $success = false;
+      }
+
+      if ($retBool)
+      {
+        return $success;
+      }
+
       return $results;
+    }
+    else
+    {
+      throw new \Exception("Attempt to use saveUpdates() on a new document");
+    }
+  }
+
+  /**
+   * Refresh our data from the database.
+   */
+  public function refresh ($findopts=[])
+  {
+    $pk = $this->primay_key;
+    $id = $this->data[$pk];
+    $classopts = ['rawDocument'=>true];
+    $data = $this->parent->getDocById($id, $findopts, $classopts);
+    if (isset($data))
+    {
+      $this->data = $data;
+      return true;
+    }
+    else
+    {
+      return false;
     }
   }
 
   /** 
    * Delete this item from the database.
    */
-  public function delete ()
+  public function delete ($retBool=null)
   {
+    if (is_null($retBool))
+    {
+      $retBool = $this->delete_return_boolean;
+    }
     $pk = $this->primary_key;
     $id = $this->data[$pk];
-    return $this->parent->deleteId($id);
+    $res = $this->parent->deleteId($id);
+
+    if ($retBool)
+    {
+      return $this->parent->deleted($res);
+    }
+
+    return $res;
   }
 
   /**
@@ -101,6 +247,10 @@ class Item extends \Lum\DB\Child
         $array[$key] = (string)$val;
       }
       elseif ($val instanceof \MongoDB\Model\BSONArray)
+      {
+        $array[$key] = $val->getArrayCopy();
+      }
+      elseif ($val instanceof \MongoDB\Model\BSONDocument)
       {
         $array[$key] = $val->getArrayCopy();
       }

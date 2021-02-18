@@ -30,6 +30,8 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
 
   protected $resultset;
 
+  public $default_value = null; // Fields will be set to this by default.
+
   protected $serialize_ignore = ['server','db','data','resultset'];
 
   public function __construct ($opts=[])
@@ -215,6 +217,56 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     }
     $data = $this->get_collection();
     return $data->deleteOne([$pk => $id]);
+  }
+
+  // Some helper routines, used in the Item class.
+
+  public function _results ($results, $isSave=false)
+  {
+    if (isset($results))
+    {
+      if (is_object($results) && is_callable([$results, 'isAcknowledged']))
+      { // Output from a MongoDB write method.
+        return $results;
+      }
+      elseif ($isSave && is_array($results) && isset($results[1]) && is_object($results[1])
+        && is_callable([$results[1], 'isAcknowledged']))
+      { // Output from Model::save()
+        return $results[1];
+      }
+    }
+  }
+
+  public function result_ok ($results, $unwrap=true, $isSave=false) :bool
+  {
+    if ($unwrap)
+    {
+      $results = $this->_results($results, $isSave);
+    }
+    if (isset($results))
+    {
+      return $results->isAcknowledged();
+    }
+    return false;
+  }
+
+  public function get_insert_id ($results)
+  {
+    $results = $this->_results($results, true); // Unwrap first.
+    if (isset($results) && $this->result_ok($results, false))
+    {
+      return $results->getInsertedId();
+    }
+  }
+
+  public function deleted ($results) :bool
+  {
+    if ($this->result_ok($results))
+    {
+      $count = $results->getDeletedCount();
+      return ($count > 0);
+    }
+    return false;
   }
 
   // Iterator interface

@@ -93,7 +93,11 @@ class Simple
       return $this->server = $core[$msc][$server];
     }
 
-    $this->server = new \MongoDB\Client($server);
+    $uriOpts = isset($opts['uriOptions']) ? $opts['uriOptions'] : [];
+    $driOpts = isset($opts['driverOptions']) ? $opts['driverOptions'] : [];
+
+    $this->server = new \MongoDB\Client($server, $uriOpts, $driOpts);
+
     if (isset($core[$msc]))
     {
       $core[$msc][$server] = $this->server;
@@ -102,6 +106,7 @@ class Simple
     {
       $core[$msc] = [$server=>$this->server];
     }
+
     return $this->server;
   }
 
@@ -145,7 +150,9 @@ class Simple
 
     $server = $this->get_server($opts);
 
-    $this->db = $server->selectDatabase($db);
+    $dbOpts = isset($opts['dbOpts']) ? $opts['dbOpts'] : [];
+
+    $this->db = $server->selectDatabase($db, $dbOpts);
     if (isset($core[$mdc]))
     {
       $core[$mdc][$db] = $this->db;
@@ -196,7 +203,20 @@ class Simple
 
     $db = $this->get_db($opts);
 
-    return $this->data = $db->selectCollection($collection);
+    if (isset($opts['collectionOpts']))
+    {
+      $colOpts = $opts['collectionOpts'];
+    }
+    elseif (isset($opts['tableOpts']))
+    {
+      $colOpts = $opts['tableOpts'];
+    }
+    else
+    {
+      $colOpts = [];
+    }
+
+    return $this->data = $db->selectCollection($collection, $colOpts);
   }
 }
 

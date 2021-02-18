@@ -179,10 +179,7 @@ abstract class Child implements \ArrayAccess
 
     if (!in_array($name, $this->virtuals))
     {
-      $modval = null;
-      if (isset($this->data[$name]))
-        $modval = $this->data[$name];
-      $this->modified_data[$name] = $modval;
+      $this->setModified($name, true);
     }
 
     $meth = "_set_$field";
@@ -198,6 +195,22 @@ abstract class Child implements \ArrayAccess
     {
       $this->save();
     }
+  }
+
+  /**
+   * Mark a field as modified.
+   */
+  public function setModified ($field, $fieldIsName=false)
+  {
+    if ($fieldIsName)
+      $name = $field;
+    else
+      $name = $this->db_field($field);
+
+    $modval = null;
+    if (isset($this->data[$name]))
+      $modval = $this->data[$name];
+    $this->modified_data[$name] = $modval;
   }
 
   /** 
