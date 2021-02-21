@@ -9,6 +9,7 @@ class Util
 {
   static function toArray ($data, $opts=[])
   {
+#    error_log("Util::toArray(data, ".json_encode($opts).")");
     if ($opts === true)
     { // A shortcut.
       $opts = ['recursive'=>true];
@@ -50,28 +51,28 @@ class Util
     foreach ($data as $key => $val)
     {
       if ($doId && $val instanceof ObjectId)
-      {
+      { 
         $array[$key] = (string)$val;
       }
       elseif ($val instanceof BSONArray)
       {
         $array[$key] 
           = $recursive 
-          ? static::toArray($val) 
+          ? static::toArray($val, $opts) 
           : $val->getArrayCopy();
       }
       elseif ($val instanceof BSONDocument)
       {
         $array[$key] 
           = $recursive 
-          ? static::toArray($val)
+          ? static::toArray($val, $opts)
           : $val->getArrayCopy();
       }
       else
       {
         if ($recursive && is_array($val))
         {
-          $array[$key] = static::toArray($val);
+          $array[$key] = static::toArray($val, $opts);
         }
         else
         {

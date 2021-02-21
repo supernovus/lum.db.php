@@ -245,6 +245,7 @@ class Item extends \Lum\DB\Child
    */
   public function to_array ($opts=[])
   {
+#    error_log("Item::to_array(".json_encode($opts).")");
     if ($this->recursive_to_array && !isset($opts['recursive']))
     { // We want recursive mode.
       $opts['recursive'] = true;
