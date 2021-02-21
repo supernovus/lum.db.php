@@ -31,6 +31,11 @@ class Item extends \Lum\DB\Child
   protected $save_return_new_id = false;
 
   /**
+   * Use recursive to_array() mode by default?
+   */
+  protected $recursive_to_array = false;
+
+  /**
    * Return our data in BSON format.
    *
    * Override this if you have custom objects in use,
@@ -143,7 +148,7 @@ class Item extends \Lum\DB\Child
    */
   public function saveUpdates ($updates, $opts=[])
   {
-    $pk = $this->primay_key;
+    $pk = $this->primary_key;
 
     $data = $this->to_bson($opts);
 
@@ -196,7 +201,7 @@ class Item extends \Lum\DB\Child
    */
   public function refresh ($findopts=[])
   {
-    $pk = $this->primay_key;
+    $pk = $this->primary_key;
     $id = $this->data[$pk];
     $classopts = ['rawDocument'=>true];
     $data = $this->parent->getDocById($id, $findopts, $classopts);
@@ -234,32 +239,17 @@ class Item extends \Lum\DB\Child
 
   /**
    * Convert the data to a "flat" array.
+   *
    * This only accounts for BSON stuff, so you'll need to override it
    * if you have secondary objects.
    */
   public function to_array ($opts=[])
   {
-    $array = [];
-    foreach ($this->data as $key => $val)
-    {
-      if ($val instanceof \MongoDB\BSON\ObjectID)
-      {
-        $array[$key] = (string)$val;
-      }
-      elseif ($val instanceof \MongoDB\Model\BSONArray)
-      {
-        $array[$key] = $val->getArrayCopy();
-      }
-      elseif ($val instanceof \MongoDB\Model\BSONDocument)
-      {
-        $array[$key] = $val->getArrayCopy();
-      }
-      else
-      {
-        $array[$key] = $val;
-      }
+    if ($this->recursive_to_array && !isset($opts['recursive']))
+    { // We want recursive mode.
+      $opts['recursive'] = true;
     }
-    return $array;
+    return Util::toArray($this->data, $opts);
   }
 
 } // end class Item

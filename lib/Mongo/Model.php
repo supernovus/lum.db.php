@@ -159,14 +159,7 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
 
   public function getDocById ($id, $findopts=[], $classopts=[])
   {
-    if (is_string($id))
-    {
-      $id = new ObjectId($id);
-    }
-    if (!($id instanceof ObjectId))
-    {
-      throw new \Exception("invalid id passed to getDocById");
-    }
+    $id = Util::objectId($id);
     $pk = $this->primary_key;
     return $this->findOne([$pk => $id], $findopts, $classopts);
   }
@@ -177,14 +170,8 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     $data = $this->get_collection();
     if (isset($doc[$pk]))
     {
-      if (is_string($doc[$pk]))
-      {
-        $doc[$pk] = new ObjectId($doc[$pk]);
-      }
-      elseif (is_array($doc[$pk]) && isset($doc[$pk]['$id']))
-      {
-        $doc[$pk] = new ObjectId($doc[$pk]['$id']);
-      }
+      // Ensure the primary key is an ObjectId.
+      $doc[$pk] = Util::objectId($doc[$pk]);
       $find = [$pk => $doc[$pk]];
       if (isset($update))
       {
@@ -207,14 +194,7 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
   public function deleteId ($id)
   {
     $pk = $this->primary_key;
-    if (is_string($id))
-    {
-      $id = new ObjectId($id);
-    }
-    elseif (is_array($id) && isset($id['$id']))
-    {
-      $id = new ObjectId($id['$id']);
-    }
+    $id = Util::objectId($id);
     $data = $this->get_collection();
     return $data->deleteOne([$pk => $id]);
   }
