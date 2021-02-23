@@ -31,9 +31,16 @@ class Item extends \Lum\DB\Child
   protected $save_return_new_id = false;
 
   /**
-   * Use recursive to_array() mode by default?
+   * Default options for the to_array() method to pass through to the
+   * Util::toArray() function which powers it. 
+   *
+   * For 1.x this is being set to ['objectId'=>true] which emulates the,
+   * behavior from the original to_array() method.
+   *
+   * In 2.x the default will become ['passthrough'=>true] mode, which I think
+   * is a simpler default going forward.
    */
-  protected $recursive_to_array = false;
+  protected $to_array_opts = ['objectId'=>true];
 
   /**
    * Return our data in BSON format.
@@ -246,10 +253,23 @@ class Item extends \Lum\DB\Child
   public function to_array ($opts=[])
   {
 #    error_log("Item::to_array(".json_encode($opts).")");
-    if ($this->recursive_to_array && !isset($opts['recursive']))
-    { // We want recursive mode.
-      $opts['recursive'] = true;
+
+    if (!is_array($opts) || count($opts) == 0)
+    { // No valid options found, let's use the defaults.
+      $opts = $this->to_array_opts;
     }
+    else
+    { // Options were passed, we're still going to use the defaults
+      // for any options that weren't explicitly specified.
+      foreach ($this->to_array_opts as $key => $val)
+      {
+        if (!isset($opts[$key]))
+        {
+          $opts[$key] = $val;
+        }
+      }
+    }
+
     return Util::toArray($this->data, $opts);
   }
 

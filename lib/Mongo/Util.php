@@ -7,24 +7,22 @@ use \MongoDB\Model\{BSONArray,BSONDocument};
 
 class Util
 {
-  static function toArray ($data, $opts=[])
+  static function toArray ($data, array $opts=[])
   {
 #    error_log("Util::toArray(data, ".json_encode($opts).")");
-    if ($opts === true)
-    { // A shortcut.
-      $opts = ['recursive'=>true];
-    }
-    elseif ($opts === false)
-    { // Another shortcut.
-      $opts = ['objectId'=>false];
-    }
 
-    $getArrayData 
-      = isset($opts['getArrayData']) 
-      ? $opts['getArrayData'] 
+    $passthrough
+      = isset($opts['passthrough']) 
+      ? $opts['passthrough'] 
       : false;
 
-    $doId = isset($opts['objectId']) ? $opts['objectId'] : true;
+    if ($passthrough
+      && ($data instanceof BSONDocument || $data instanceof BSONArray))
+    { // This is a super shortcut, we're passing through to getArrayCopy().
+      return $data->getArrayCopy();
+    }
+
+    $doId = isset($opts['objectId']) ? $opts['objectId'] : false;
 
     $doArr
       = isset($opts['bsonArray'])
@@ -41,35 +39,29 @@ class Util
       ? $opts['recursive']
       : false;
 
-    if ($getArrayData 
-      && ($data instanceof BSONDocument || $data instanceof BSONArray))
-    { // This is a super shortcut.
-      return $data->getArrayCopy();
-    }
-
     $array = [];
     foreach ($data as $key => $val)
     {
       if ($doId && $val instanceof ObjectId)
-      { 
+      { // Stringify ObjectId instances.
         $array[$key] = (string)$val;
       }
-      elseif ($val instanceof BSONArray)
-      {
+      elseif ($doArr && $val instanceof BSONArray)
+      { // Serializing BSONArray specifically.
         $array[$key] 
           = $recursive 
           ? static::toArray($val, $opts) 
           : $val->getArrayCopy();
       }
-      elseif ($val instanceof BSONDocument)
-      {
+      elseif ($doObj && $val instanceof BSONDocument)
+      { // Serializing BSONDocument specifically.
         $array[$key] 
           = $recursive 
           ? static::toArray($val, $opts)
           : $val->getArrayCopy();
       }
       else
-      {
+      { 
         if ($recursive && is_array($val))
         {
           $array[$key] = static::toArray($val, $opts);
