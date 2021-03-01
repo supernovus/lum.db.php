@@ -43,6 +43,18 @@ class Item extends \Lum\DB\Child
   protected $to_array_opts = ['objectId'=>true];
 
   /**
+   * If true (default) any options in to_array_opts have to be explicitly
+   * overridden in the $opts sent to the to_array() method. For example, with
+   * the current defaults, you'd need to set ['objectId'=>false] in order to
+   * override the to_array_opts property.
+   *
+   * If set to false, sending ANY options in the $opts parameter will override
+   * ALL options in the to_array_opts property (reverting instead to the
+   * defaults in the Util::toArray() method for any unspecified options.)
+   */
+  protected $to_array_opts_are_defaults = true;
+
+  /**
    * Return our data in BSON format.
    *
    * Override this if you have custom objects in use,
@@ -258,8 +270,8 @@ class Item extends \Lum\DB\Child
     { // No valid options found, let's use the defaults.
       $opts = $this->to_array_opts;
     }
-    else
-    { // Options were passed, we're still going to use the defaults
+    elseif ($this->to_array_opts_are_defaults)
+    { // Options were passed, but we're still going to use the defaults
       // for any options that weren't explicitly specified.
       foreach ($this->to_array_opts as $key => $val)
       {
