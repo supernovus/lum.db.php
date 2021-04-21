@@ -2,6 +2,8 @@
 
 namespace Lum\DB\Mongo;
 
+use \MongoDB\Model\BSONDocument;
+
 /**
  * A base class for PDO/SQL database models.
  */
@@ -104,32 +106,38 @@ class Item extends \Lum\DB\Child
         {
           $this->modified_data = [];
         }
-        return $this->parent->save($data);
+        $res = $this->parent->save($data);
       }
+      else 
+      { // Use the MongoDB '$set' operator to update only changed fields.
+        if (count($this->modified_data)==0) return;
 
-      if (count($this->modified_data)==0) return;
+        $fields = array_keys($this->modified_data);
+#       error_log("<changed>".json_encode($fields)."</changed>");
+        $cdata  = [];
+        $fc = count($fields);
+        for ($i=0; $i< $fc; $i++)
+        {
+          $field = $fields[$i];
+#         error_log("<modified>$field</modified>");
+          if ($field == $pk) continue; // Sanity check.
+          $cdata[$field] = $data[$field];
+        }
 
-      $fields = array_keys($this->modified_data);
-#      error_log("<changed>".json_encode($fields)."</changed>");
-      $cdata  = [];
-      $fc = count($fields);
-      for ($i=0; $i< $fc; $i++)
-      {
-        $field = $fields[$i];
-#        error_log("<modified>$field</modified>");
-        if ($field == $pk) continue; // Sanity check.
-        $cdata[$field] = $data[$field];
+        if ($this->clear_on_update)
+        { // Clear the modified data.
+          $this->modified_data = [];
+        }
+
+        $res = $this->parent->save($data, ['$set'=>$cdata]);
       }
-
-      if ($this->clear_on_update)
-      { // Clear the modified data.
-        $this->modified_data = [];
-      }
-
-      $res = $this->parent->save($data, ['$set'=>$cdata]);
       if ($retBool)
       {
         return $this->parent->result_ok($res, true, true);
+      }
+      if ($retId)
+      { // This is an odd request, but whatever.
+        return $data[$pk];
       }
       return $res;
     }
@@ -173,45 +181,120 @@ class Item extends \Lum\DB\Child
 
     if (isset($data[$pk]))
     {
-      $retBool = isset($opts['returnBoolean'])
-        ? $opts['returnBoolean']
-        : false;
-
-      $results = $this->parent->save($data, $updates);
-
-      if (is_object($results[1]) && $results[1]->isAcknowledged())
-      {
-        $refresh = isset($opts['refresh']) ? $opts['refresh'] : true;
-        if ($this->clear_on_update)
-        {
-          $this->modified_data = [];
-        }
-        if ($refresh)
-        {
-          $this->refresh();
-          $results[2] = $this->to_bson($opts);
-        }
-        if (isset($opts['onUpdated']) && is_callable($opts['onUpdated']))
-        {
-          call_user_func($opts['onUpdated'], $results, $data, $updates);
-        }
-        $success = true;
-      }
-      else
-      {
-        $success = false;
-      }
-
-      if ($retBool)
-      {
-        return $success;
-      }
-
-      return $results;
+      $res = $this->parent->save($data, $updates);
+      return $this->return_updated($res, $opts);
     }
     else
     {
       throw new \Exception("Attempt to use saveUpdates() on a new document");
+    }
+  }
+
+  /**
+   * Replace the underlying document with a new data structure,
+   * then refresh our data from the database. This is a pretty simplistic
+   * way of handling this kind of request, but will work in a pinch.
+   */
+  public function replaceData ($newData, $opts=[])
+  {
+    if (!is_array($newData) && !($newData instanceof BSONDocument))
+    { // Not valid data, let's see if we can make it valid data.
+      $found = false;
+
+      if (is_object($newData))
+      {
+        foreach (['to_bson','toBSON','asBSON'] as $methName)
+        {
+          $meth = [$newData, $metnName];
+          if (is_object($newData) && is_callable($meth))
+          {
+            $newData = call_user_func($meth);
+            if (is_array($data) || $data instanceof BSONDocument)
+            {
+              $found = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!$found)
+      { // Nope, couldn't make it valid data.
+        throw new \Exception("Invalid data passed to replaceData()");
+      }
+    }
+
+    $pk = $this->primary_key;
+    $oldData = $this->to_bson($opts);
+    if (isset($oldData[$pk]))
+    {
+      if (!isset($newData[$pk]))
+      { // Add the primary key.
+        $newData[$pk] = $oldData[$pk];
+      }
+
+      $res = $this->parent->save($newData);
+      return $this->return_updated($res, $opts);
+    }
+    else 
+    {
+      throw new \Exception("Attempted to use replaceData() on a new document");
+    }
+  }
+
+  protected function return_updated ($results, $opts)
+  {
+    $retBool = isset($opts['returnBoolean'])
+      ? $opts['returnBoolean']
+      : $this->save_return_boolean;
+
+    if ($this->parent->result_ok($results, true, true))
+    {
+      $refresh = isset($opts['refresh']) ? $opts['refresh'] : true;
+      if (is_array($refresh))
+      { // Options for the refresh option.
+        $refreshOpts = $refresh;
+        $refresh = true;
+      }
+      else
+      { // Use default refresh options.
+        $refreshOpts = [];
+      }
+
+      if ($this->clear_on_update)
+      {
+        $this->modified_data = [];
+      }
+
+      if ($refresh)
+      {
+        $success = $this->refresh($refreshOpts);
+        $results[2] = $this->to_bson($opts);
+      }
+      else
+      {
+        $success = true;
+      }
+
+      if (isset($opts['onUpdated']) && is_callable($opts['onUpdated']))
+      {
+        call_user_func($opts['onUpdated'], $results, $data, $updates, 
+          $success);
+      }
+    }
+    else
+    {
+      $success = false;
+    }
+
+    if ($retBool)
+    {
+      return $success;
+    }
+    else
+    { // Add success to the results.
+      $results[3] = $success;
+      return $results;
     }
   }
 

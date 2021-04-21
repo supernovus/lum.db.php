@@ -2,6 +2,7 @@
 
 namespace Lum\DB\Mongo;
 use \MongoDB\BSON\ObjectId;
+use \MongoDB\{InsertOneResult, UpdateResult};
 
 /**
  * MongoDB base class for object models.
@@ -31,6 +32,8 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
   protected $resultset;
 
   public $default_value = null; // Fields will be set to this by default.
+
+  protected $use_object_id = true;
 
   protected $serialize_ignore = ['server','db','data','resultset'];
 
@@ -159,33 +162,34 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
 
   public function getDocById ($id, $findopts=[], $classopts=[])
   {
-    $id = Util::objectId($id);
+    if ($this->use_object_id)
+      $id = Util::objectId($id);
     $pk = $this->primary_key;
     return $this->findOne([$pk => $id], $findopts, $classopts);
   }
 
-  public function save ($doc, $update=null)
+  public function save ($doc, $update=null, $options=[])
   {
     $pk = $this->primary_key;
     $data = $this->get_collection();
     if (isset($doc[$pk]))
     {
-      // Ensure the primary key is an ObjectId.
-      $doc[$pk] = Util::objectId($doc[$pk]);
+      if ($this->use_object_id)
+        $doc[$pk] = Util::objectId($doc[$pk]);
       $find = [$pk => $doc[$pk]];
       if (isset($update))
       {
-        $res = $data->updateOne($find, $update);
+        $res = $data->updateOne($find, $update, $options);
       }
       else
       {
-        $res = $data->replaceOne($find, $doc);
+        $res = $data->replaceOne($find, $doc, $options);
       }
       $isnew = 0;
     }
     else
     {
-      $res = $data->insertOne($doc);
+      $res = $data->insertOne($doc, $options);
       $isnew = 1;
     }
     return [$isnew, $res, $doc];
@@ -194,7 +198,8 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
   public function deleteId ($id)
   {
     $pk = $this->primary_key;
-    $id = Util::objectId($id);
+    if ($this->use_object_id)
+      $id = Util::objectId($id);
     $data = $this->get_collection();
     return $data->deleteOne([$pk => $id]);
   }
@@ -235,7 +240,14 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     $results = $this->_results($results, true); // Unwrap first.
     if (isset($results) && $this->result_ok($results, false))
     {
-      return $results->getInsertedId();
+      if ($results instanceof InsertOneResult)
+      {
+        return $results->getInsertedId();
+      }
+      elseif ($results instanceof UpdateResult)
+      {
+        return $results->getUpsertedId();
+      }
     }
   }
 
