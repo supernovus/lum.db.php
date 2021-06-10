@@ -2,6 +2,7 @@
 
 namespace Lum\DB\Mongo;
 
+use \MongoDB\BSON;
 use \MongoDB\BSON\ObjectId;
 use \MongoDB\Model\{BSONArray,BSONDocument};
 
@@ -21,8 +22,9 @@ class Util
     { // This is a super shortcut, we're passing through to getArrayCopy().
       return $data->getArrayCopy();
     }
-
+ 
     $doId = isset($opts['objectId']) ? $opts['objectId'] : false;
+    $idStr = isset($opts['idString']) ? $opts['idString'] : true;
 
     $doArr
       = isset($opts['bsonArray'])
@@ -43,8 +45,15 @@ class Util
     foreach ($data as $key => $val)
     {
       if ($doId && $val instanceof ObjectId)
-      { // Stringify ObjectId instances.
-        $array[$key] = (string)$val;
+      { 
+        if ($idStr)
+        { // Stringify ObjectId instance.
+          $array[$key] = (string)$val;
+        }
+        else
+        { // Use an Extended JSON representation.
+          $array[$key] = ['$oid'=>(string)$val];
+        }
       }
       elseif ($doArr && $val instanceof BSONArray)
       { // Serializing BSONArray specifically.
@@ -73,6 +82,53 @@ class Util
       }
     }
     return $array;
+  }
+
+  /**
+   * Convert input into JSON-serialized string.
+   *
+   * You'd think simply passing a BSON document to json_encode() would work,
+   * but it sadly doesn't. So this is a wrapper.
+   */
+  static function toJSON ($input, $opts=[])
+  {
+    $legacy = isset($opts['legacy'])
+      ? $opts['legacy']
+      : (!function_exists('\MongoDB\BSON\toCanonicalExtendedJSON'));
+
+    $relaxed = isset($opts['relaxed'])
+      ? $opts['relaxed']
+      : (isset($opts['canonical']) ? !$opts['canonical'] : true);
+
+    if (!is_iterable($input)) return $input;
+
+    if ($input instanceof BSONDocument || $input instanceof BSONArray 
+      || $input instanceof BSON\Type)
+    {
+      $bson = BSON\fromPHP($input);
+      if ($legacy)
+      { // Old legacy format, not recommended.
+        $json = BSON\toJSON($bson);
+      }
+      elseif ($relaxed)
+      {
+        $json = BSON\toRelaxedExtendedJSON($bson);
+      }
+      else
+      {
+        $json = BSON\toCanonicalExtendedJSON($bson);
+      }
+    }
+    elseif (is_array($input) || is_object($input))
+    { // Assume it's a PHP Array or Object with keys in Extended JSON format.
+      $json = json_encode($input);
+    }
+    elseif (is_string($input))
+    { // If a string was passed, assume it is a JSON string already.
+      $json = $input;
+    }
+
+    return $json;
   }
 
   static function idString ($id)
