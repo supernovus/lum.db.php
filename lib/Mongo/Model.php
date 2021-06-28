@@ -157,7 +157,14 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
   public function rowCount ($find=[], $findopts=[])
   {
     $data = $this->get_collection();
-    return $data->count($find, $findopts);
+    if (is_callable([$data, 'countDocuments']))
+    { // Use the newer method.
+      return $data->countDocuments($find, $findopts);
+    }
+    else
+    { // Use the old one.
+      return $data->count($find, $findopts);
+    }
   }
 
   public function getDocById ($id, $findopts=[], $classopts=[])
