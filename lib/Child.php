@@ -152,7 +152,25 @@ abstract class Child implements \ArrayAccess
    */
   public function column_names ()
   {
-    return array_keys($this->data);
+    if (is_array($this->data))
+    {
+      return array_keys($this->data);
+    }
+    elseif (is_object($this->data))
+    {
+      if (is_callable([$this->data, 'keys']))
+      {
+        return $this->data->keys();
+      }
+      elseif (is_callable([$this->data, 'getArrayCopy']))
+      {
+        return array_keys($this->data->getArrayCopy());
+      }
+      elseif (is_callable([$this->data, 'to_array']))
+      {
+        return array_keys($this->data->to_array());
+      }
+    }
   }
 
   /** 

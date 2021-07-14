@@ -73,6 +73,10 @@ class Results implements \Iterator, \Countable
 
   public function rewind ()
   {
+    if (isset($this->iterator))
+    { // MongoDB doesn't like that, restart the iteration.
+      unset($this->iterator, $this->cursor);
+    }
     $this->getIterator()->rewind();
   }
 
