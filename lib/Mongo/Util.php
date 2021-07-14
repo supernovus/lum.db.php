@@ -143,15 +143,15 @@ class Util
     }
     elseif (is_object($id) && isset($id->_id))
     { // A document or sub-document with an _id property.
-      return (string)$id->_id;
+      return static::idString($id->_id);
     }
     elseif (is_array($id) && isset($id['_id']))
     { // An array document with an '_id' attribute.
-      return (string)$id['_id'];
+      return static::idString($id['_id']);
     }
     elseif (is_array($id) && isset($id['$oid']))
     { // Strict JSON Representation.
-      return (string)$id['$oid'];
+      return static::idString($id['$oid']);
     }
     else
     { // Don't know what to do with that.
@@ -165,6 +165,10 @@ class Util
     if ($id instanceof ObjectId)
     { // It's already what we want.
       return $id;
+    }
+    elseif (is_object($id) && isset($id->_id) && $id->_id instanceof ObjectId)
+    { // It's a document with an _id property.
+      return $id->_id;
     }
     else
     { // It's something else, get the id string and return an ObjectId.
