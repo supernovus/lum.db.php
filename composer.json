@@ -13,11 +13,11 @@
   "require":
   {
     "php": "^7.0 || ^8.0",
-    "lum/lum-core": "^1.0 || dev-master"
+    "lum/lum-core": "^1.7"
   },
   "require-dev":
   {
-    "lum/lum-test": "^2.1 || dev-master",
+    "lum/lum-test": "^2.2",
     "ext-PDO": "*"
   },
   "suggest":
@@ -34,5 +34,12 @@
   "scripts":
   {
     "test": "lumtest"
+  },
+  "extra":
+  {
+    "branch-alias":
+    {
+      "dev-main": "1.x-dev"
+    }
   }
 }
