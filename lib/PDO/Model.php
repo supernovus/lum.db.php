@@ -628,40 +628,40 @@ abstract class Model implements \Iterator, \ArrayAccess
   // If you attempt to use this with resultclass set to false,
   // things will break, badly. Just don't do it.
 
-  public function rewind ()
+  public function rewind (): void
   {
     $this->resultset = $this->all();
-    return $this->resultset->rewind();
+    $this->resultset->rewind();
   }
 
-  public function current ()
+  public function current (): mixed
   {
     return $this->resultset->current();
   }
 
-  public function next ()
+  public function next (): void
   {
-    return $this->resultset->next();
+    $this->resultset->next();
   }
 
-  public function key ()
+  public function key (): mixed
   {
     return $this->resultset->key();
   }
 
-  public function valid ()
+  public function valid (): bool
   {
     return $this->resultset->valid();
   }
 
   // ArrayAccess interface for easier querying.
 
-  public function offsetGet ($offset)
+  public function offsetGet ($offset): mixed
   {
     return $this->getRowById($offset);
   }
 
-  public function offsetExists ($offset)
+  public function offsetExists ($offset): bool
   {
     $row = $this->getRowById($offset);
     if ($row)
@@ -670,13 +670,13 @@ abstract class Model implements \Iterator, \ArrayAccess
       return False;
   }
 
-  public function offsetUnset ($offset)
+  public function offsetUnset ($offset): void
   {
     $pk = $this->primary_key;
-    return $this->delete([$pk=>$offset]);
+    $this->delete([$pk=>$offset]);
   }
 
-  public function offsetSet ($offset, $value)
+  public function offsetSet ($offset, $value): void
   {
     throw new \Exception('You cannot set DB Model values that way.');
   }

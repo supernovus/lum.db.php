@@ -316,7 +316,7 @@ abstract class Child implements \ArrayAccess
   /**
    * ArrayAccess interface, alias to __isset().
    */
-  public function offsetExists ($name)
+  public function offsetExists ($name): bool
   {
     return $this->__isset($name);
   }
@@ -324,7 +324,7 @@ abstract class Child implements \ArrayAccess
   /**
    * ArrayAccess interface, alias to __set().
    */
-  public function offsetSet ($name, $value)
+  public function offsetSet ($name, $value): void
   {
     return $this->__set($name, $value);
   }
@@ -332,7 +332,7 @@ abstract class Child implements \ArrayAccess
   /**
    * ArrayAccess interface, alias to __unset().
    */
-  public function offsetUnset ($name)
+  public function offsetUnset ($name): void
   {
     return $this->__unset($name);
   }
@@ -340,7 +340,7 @@ abstract class Child implements \ArrayAccess
   /**
    * ArrayAccess interface, alias to __get().
    */
-  public function offsetGet ($name)
+  public function offsetGet ($name): mixed
   {
     return $this->__get($name);
   }

@@ -270,40 +270,40 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
 
   // Iterator interface
 
-  public function rewind ()
+  public function rewind (): void
   {
     $this->resultset = $this->find();
-    return $this->resultset->rewind();
+    $this->resultset->rewind();
   }
 
-  public function current ()
+  public function current (): mixed
   {
-    $this->resultset->current();
+    return $this->resultset->current();
   }
 
-  public function next ()
+  public function next (): void
   {
     $this->resultset->next();
   }
 
-  public function key ()
+  public function key (): mixed
   {
-    $this->resultset->key();
+    return $this->resultset->key();
   }
 
-  public function valid ()
+  public function valid (): bool
   {
-    $this->resultset->valid();
+    return $this->resultset->valid();
   }
 
   // ArrayAccess interface.
 
-  public function offsetGet ($offset)
+  public function offsetGet ($offset): mixed
   {
     return $this->getDocById($offset);
   }
 
-  public function offsetExists ($offset)
+  public function offsetExists ($offset): bool
   {
     $doc = $this->getDocById($offset);
     if ($doc)
@@ -311,7 +311,7 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     return false;
   }
 
-  public function offsetSet ($offset, $doc)
+  public function offsetSet ($offset, $doc): void
   {
     $pk = $this->primary_key;
     $id = new ObjectId($offset);
@@ -322,9 +322,9 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
       $this->save($doc);
   }
 
-  public function offsetUnset ($offset)
+  public function offsetUnset ($offset): void
   {
-    return $this->deleteId($offset);
+    $this->deleteId($offset);
   }
 }
 
