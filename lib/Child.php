@@ -326,7 +326,7 @@ abstract class Child implements \ArrayAccess
    */
   public function offsetSet ($name, $value): void
   {
-    return $this->__set($name, $value);
+    $this->__set($name, $value);
   }
 
   /**
@@ -334,7 +334,7 @@ abstract class Child implements \ArrayAccess
    */
   public function offsetUnset ($name): void
   {
-    return $this->__unset($name);
+    $this->__unset($name);
   }
 
   /**
