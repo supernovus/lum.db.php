@@ -57,7 +57,7 @@ class ResultSet implements \Iterator, \Countable
       $this->primary_key = $primary_key;
   }
 
-  public function rewind ()
+  public function rewind (): void
   {
     $opts = $this->class_opts;
     $opts['rawRow'] = true;
@@ -65,23 +65,23 @@ class ResultSet implements \Iterator, \Countable
     $this->next();
   }
 
-  public function current ()
+  public function current (): mixed
   {
     return $this->parent->wrapRow($this->current);
   }
 
-  public function next ()
+  public function next (): void
   {
     $this->current = $this->results->fetch();
   }
 
-  public function key ()
+  public function key (): mixed
   {
     $pk = $this->primary_key;
     return $this->current[$pk];
   }
 
-  public function valid ()
+  public function valid (): bool
   {
     if ($this->current)
       return true;
@@ -103,8 +103,8 @@ class ResultSet implements \Iterator, \Countable
     }
     return $map;
   }
-
-  public function count ()
+  
+  public function count (): int
   {
     return $this->parent->rowcount($this->query);
   }

@@ -61,49 +61,49 @@ class ResultArray implements \ArrayAccess, \Countable, \Iterator
   }
 
   // Iterator interface.
-  public function rewind ()
+  public function rewind (): void
   {
     return reset($this->results);
   }
-  public function current ()
+  public function current (): mixed
   {
     $row = current($this->results);
     return $this->parent->wrapRow($row);
   }
-  public function next ()
+  public function next (): void
   {
     return next($this->results);
   }
-  public function key ()
+  public function key (): mixed
   {
     return key($this->results);
   }
-  public function valid ()
+  public function valid (): bool
   {
     $key = key($this->results);
     return ($key !== Null && $key !== False);
   }
 
   // Countable interface.
-  public function count ()
+  public function count (): int
   {
     return count($this->results);
   }
 
   // ArrayAccess interface.
-  public function offsetGet ($offset)
+  public function offsetGet ($offset): mixed
   {
     return $this->parent->wrapRow($this->results[$offset]);
   }
-  public function offsetSet ($offset, $value)
+  public function offsetSet ($offset, $value): void
   {
     throw new \Exception("You cannot set query results.");
   }
-  public function offsetExists ($offset)
+  public function offsetExists ($offset): bool
   {
     return isset($this->results[$offset]);
   }
-  public function offsetUnset ($offset)
+  public function offsetUnset ($offset): void
   {
     throw new \Exception("You cannot unset query results.");
   }

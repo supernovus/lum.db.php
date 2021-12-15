@@ -50,7 +50,7 @@ class Results implements \Iterator, \Countable
     return $this->iterator;
   }
 
-  public function count ()
+  public function count (): int
   {
     return $this->rowCount($this->parent->results_use_filtered_count);
   }
@@ -71,7 +71,7 @@ class Results implements \Iterator, \Countable
     return $this->parent->rowCount($this->find_query, $count_opts);
   }
 
-  public function rewind ()
+  public function rewind (): void
   {
     if (isset($this->iterator))
     { // MongoDB doesn't like that, restart the iteration.
@@ -80,22 +80,22 @@ class Results implements \Iterator, \Countable
     $this->getIterator()->rewind();
   }
 
-  public function current ()
+  public function current (): mixed
   {
     return $this->parent->wrapRow($this->getIterator()->current(), $this->class_opts);
   }
 
-  public function next ()
+  public function next (): void
   {
     $this->getIterator()->next();
   }
 
-  public function key ()
+  public function key (): mixed
   {
     return $this->getIterator()->key();
   }
 
-  public function valid ()
+  public function valid (): bool
   {
     return $this->getIterator()->valid();
   }
