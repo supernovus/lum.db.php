@@ -63,7 +63,7 @@ class ResultArray implements \ArrayAccess, \Countable, \Iterator
   // Iterator interface.
   public function rewind (): void
   {
-    return reset($this->results);
+    reset($this->results);
   }
   public function current (): mixed
   {
@@ -72,7 +72,7 @@ class ResultArray implements \ArrayAccess, \Countable, \Iterator
   }
   public function next (): void
   {
-    return next($this->results);
+    next($this->results);
   }
   public function key (): mixed
   {

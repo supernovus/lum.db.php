@@ -5,6 +5,8 @@ namespace Lum\DB\PDO;
 // TODO: make more things support the as_name table aliases.
 // TODO: persistent column aliases? [Might be useful.]
 
+use \Lum\Compat as LC;
+
 /**
  * An object oriented database model library.
  */
@@ -493,6 +495,12 @@ abstract class Model implements \Iterator, \ArrayAccess
    */
   public function getRowsWhere ($where, $data=null, $want=[], $single=false)
   {
+    if (!is_array($want))
+    {
+      LC::deprecate("getRowsWhere() want must be an array not a "
+        . get_debug_type($want));
+      $want = [];
+    }
     if (is_string($where) && is_array($data))
     {
       $want['data'] = $data;

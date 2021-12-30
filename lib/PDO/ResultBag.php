@@ -15,36 +15,36 @@ namespace Lum\DB\PDO;
 
 class ResultBag extends ResultArray
 {
-  protected function offsetGet ($offset)
+  protected function offsetGet ($offset): mixed
   {
     $row = current($this->results);
     return $row[$offset];
   }
 
-  protected function offsetExists ($offset)
+  protected function offsetExists ($offset): bool
   {
     $row = current($this->results);
     return isset($row[$offset]);
   }
 
-  protected function __get ($name)
+  protected function __get ($name): mixed
   {
     return $this->offsetGet($name);
   }
 
-  protected function __isset ($name)
+  protected function __isset ($name): bool
   {
     return $this->offsetExists($name);
   }
 
-  protected function __set ($name, $value)
+  protected function __set ($name, $value): void
   {
-    return $this->offsetSet($name, $value);
+    $this->offsetSet($name, $value);
   }
 
-  protected function __unset ($name)
+  protected function __unset ($name): void
   {
-    return $this->offsetUnset($name);
+    $this->offsetUnset($name);
   }
 
 }
