@@ -31,6 +31,8 @@ abstract class Child implements \ArrayAccess
   protected $warn_keys   = false; // If strict_keys is false, then warn?
   protected $null_keys   = false; // If strict_keys is false, return null?
 
+  protected $empty_values = false; // Allow '' to be a valid value.
+
   /** 
    * To make aliases to the database field names, override the $aliases
    * member in your sub-classes. It should be an associative array, where
@@ -289,7 +291,8 @@ abstract class Child implements \ArrayAccess
     }
     $name = $this->db_field($name, False);
     if (isset($name))
-      return (isset($this->data[$name]) && $this->data[$name] != '');
+      return (isset($this->data[$name]) 
+      && ($this->empty_values || $this->data[$name] !== ''));
     else
       return False;
   }
