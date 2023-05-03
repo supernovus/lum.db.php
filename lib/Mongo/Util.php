@@ -23,7 +23,7 @@ class Util
       return $data->getArrayCopy();
     }
  
-    $doId = isset($opts['objectId']) ? $opts['objectId'] : false;
+    $doId  = isset($opts['objectId']) ? $opts['objectId'] : false;
     $idStr = isset($opts['idString']) ? $opts['idString'] : true;
 
     $doArr

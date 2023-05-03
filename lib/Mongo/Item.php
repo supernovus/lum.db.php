@@ -34,13 +34,7 @@ class Item extends \Lum\DB\Child
 
   /**
    * Default options for the to_array() method to pass through to the
-   * Util::toArray() function which powers it. 
-   *
-   * For 1.x this is being set to ['objectId'=>true] which emulates the,
-   * behavior from the original to_array() method.
-   *
-   * In 2.x the default will become ['passthrough'=>true] mode, which I think
-   * is a simpler default going forward.
+   * Util::toArray() function which powers it.
    */
   protected $to_array_opts = ['objectId'=>true];
 
@@ -340,7 +334,7 @@ class Item extends \Lum\DB\Child
   }
 
   /**
-   * Convert the data to a "flat" array.
+   * Convert the data to a PHP array.
    *
    * This only accounts for BSON stuff, so you'll need to override it
    * if you have secondary objects.
