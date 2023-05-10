@@ -2,7 +2,7 @@
 
 namespace Lum\DB\Mongo;
 
-use \MongoDB\Model\BSONDocument;
+use \MongoDB\BSON\UTCDateTime as BSONDate;
 
 /**
  * A base class for PDO/SQL database models.
@@ -31,6 +31,17 @@ class Item extends \Lum\DB\Child
    * Default value for the 'returnNewId' option of the save() method.
    */
   protected $save_return_new_id = false;
+
+  /**
+   * Update a timestamp field when `save()` or `saveUpdates()` is called?
+   */
+  protected $save_update_timestamp_field = null;
+
+  /**
+   * By default we use the BSON UTC DateTime format for timestamps.
+   * If this is set to `true` we will use the `time()` format instead.
+   */
+  protected $save_update_timestamp_unix = false;
 
   /**
    * Default options for the to_array() method to pass through to the
@@ -90,6 +101,14 @@ class Item extends \Lum\DB\Child
     $retId = isset($opts['returnNewId'])
       ? $opts['returnNewId']
       : $this->save_return_new_id;
+
+    if (isset($this->save_update_timestamp_field) 
+      && is_string($this->save_update_timestamp_field))
+    { // Auto-update a timestamp field.
+      $field = $this->save_update_timestamp_field;
+      $ts = $this->save_update_timestamp_unix ? time() : new BSONDate();
+      $this[$field] = $ts;
+    }
 
     if (isset($data[$pk]) && !isset($this->modified_data[$pk]))
     { // Update an existing row.
@@ -173,6 +192,40 @@ class Item extends \Lum\DB\Child
 
     $data = $this->to_bson($opts);
 
+    if (isset($this->save_update_timestamp_field) 
+      && is_string($this->save_update_timestamp_field))
+    { // Auto-update a timestamp field.
+      $field = $this->save_update_timestamp_field;
+      if ($this->save_update_timestamp_unix)
+      {
+        if (isset($updates['$set']))
+        { 
+          if (!isset($updates['$set'][$field]))
+          { 
+            $updates['$set'][$field] = time();
+          }
+        }
+        else
+        { 
+          $updates['$set'] = [$field => time()];
+        }
+      }
+      else 
+      {
+        if (!isset($updates['$set'], $updates['$set'][$field]))
+        { 
+          if (isset($updates['$currentDate']))
+          {
+            $updates['$currentDate'][$field] = true;
+          }
+          else 
+          {
+            $updates['$currentDate'] = [$field => true];
+          }
+        }
+      }
+    }
+
     if (isset($data[$pk]))
     {
       $res = $this->parent->save($data, $updates);
@@ -191,7 +244,7 @@ class Item extends \Lum\DB\Child
    */
   public function replaceData ($newData, $opts=[])
   {
-    if (!is_array($newData) && !($newData instanceof BSONDocument))
+    if (!Util::isAssoc($newData))
     { // Not valid data, let's see if we can make it valid data.
       $found = false;
 
@@ -199,11 +252,11 @@ class Item extends \Lum\DB\Child
       {
         foreach (['to_bson','toBSON','asBSON'] as $methName)
         {
-          $meth = [$newData, $metnName];
+          $meth = [$newData, $methName];
           if (is_object($newData) && is_callable($meth))
           {
             $newData = call_user_func($meth);
-            if (is_array($data) || $data instanceof BSONDocument)
+            if (Util::isAssoc($newData))
             {
               $found = true;
               break;
@@ -272,8 +325,7 @@ class Item extends \Lum\DB\Child
 
       if (isset($opts['onUpdated']) && is_callable($opts['onUpdated']))
       {
-        call_user_func($opts['onUpdated'], $results, $data, $updates, 
-          $success);
+        call_user_func($opts['onUpdated'], $results, $success);
       }
     }
     else

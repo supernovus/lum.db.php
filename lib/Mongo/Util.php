@@ -88,7 +88,7 @@ class Util
    * Convert input into JSON-serialized string.
    *
    * You'd think simply passing a BSON document to json_encode() would work,
-   * but it sadly doesn't. So this is a wrapper.
+   * but it sadly doesn't always. So this is a wrapper.
    */
   static function toJSON ($input, $opts=[])
   {
@@ -131,7 +131,7 @@ class Util
     return $json;
   }
 
-  static function idString ($id)
+  static function idString ($id): string
   {
     if (is_string($id))
     { // Simplest, it's already a string.
@@ -160,7 +160,7 @@ class Util
     }
   }
 
-  static function objectId ($id)
+  static function objectId ($id): ObjectId
   {
     if ($id instanceof ObjectId)
     { // It's already what we want.
@@ -175,4 +175,17 @@ class Util
       return new ObjectId(static::idString($id));
     }
   }
+
+  static function isAssoc ($what): bool
+  {
+    return (($what instanceof BSONDocument)
+      || (is_array($what) && !array_is_list($what)));
+  }
+
+  static function isLinear($what): bool
+  {
+    return (($what instanceof BSONArray)
+      || (is_array($what) && array_is_list($what)));
+  }
+
 }

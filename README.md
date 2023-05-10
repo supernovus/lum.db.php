@@ -49,6 +49,7 @@ Classes for working with MongoDB via the `mongodb` extension (not the older
 | Lum\DB\Mongo\Model      | An abstract class representing an ORM model.      |
 | Lum\DB\Mongo\Results    | A class representing a set of query results.      |
 | Lum\DB\Mongo\Simple     | A simple MongoDB wrapper library.                 |
+| Lum\DB\Mongo\Util       | A static class of helper methods.                 |
 
 ### Schemata
 

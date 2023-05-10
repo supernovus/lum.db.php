@@ -12,7 +12,8 @@
   ],
   "require":
   {
-    "lum/lum-core": "^3.0"
+    "lum/lum-core": "^3.0",
+    "lum/lum-data": "^1.0"
   },
   "require-dev":
   {
