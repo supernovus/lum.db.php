@@ -54,7 +54,7 @@ class ResultSet implements \Iterator, \Countable
     if (isset($opts['pk']))
       $this->primary_key = $opts['pk'];
     elseif (isset($pk))
-      $this->primary_key = $primary_key;
+      $this->primary_key = $pk;
   }
 
   public function rewind (): void
