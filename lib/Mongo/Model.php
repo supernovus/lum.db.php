@@ -192,7 +192,10 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
       {
         $res = $data->replaceOne($find, $doc, $options);
       }
-      $isnew = 0;
+      $upsert = $options['upsert'] ?? false;
+      $isnew = ($upsert && $res->isAcknowledged()) 
+        ? $res->getUpsertedCount() 
+        : 0;
     }
     else
     {

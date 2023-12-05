@@ -62,6 +62,11 @@ class Item extends \Lum\DB\Child
   protected $to_array_opts_are_defaults = true;
 
   /**
+   * Default options to pass to our parent model's `save()` method.
+   */
+  protected $save_parent_opts = [];
+
+  /**
    * Return our data in BSON format.
    *
    * Override this if you have custom objects in use,
@@ -94,6 +99,8 @@ class Item extends \Lum\DB\Child
 
     $data = $this->to_bson($opts);
 
+    $saveOpts = $opts['model'] ?? $this->save_parent_opts;
+
     $retBool = isset($opts['returnBoolean'])
       ? $opts['returnBoolean']
       : $this->save_return_boolean;
@@ -119,30 +126,13 @@ class Item extends \Lum\DB\Child
         {
           $this->modified_data = [];
         }
-        $res = $this->parent->save($data);
+        $res = $this->parent->save($data, null, $saveOpts);
       }
       else 
       { // Use the MongoDB '$set' operator to update only changed fields.
         if (count($this->modified_data)==0) return;
-
-        $fields = array_keys($this->modified_data);
-#       error_log("<changed>".json_encode($fields)."</changed>");
-        $cdata  = [];
-        $fc = count($fields);
-        for ($i=0; $i< $fc; $i++)
-        {
-          $field = $fields[$i];
-#         error_log("<modified>$field</modified>");
-          if ($field == $pk) continue; // Sanity check.
-          $cdata[$field] = $data[$field];
-        }
-
-        if ($this->clear_on_update)
-        { // Clear the modified data.
-          $this->modified_data = [];
-        }
-
-        $res = $this->parent->save($data, ['$set'=>$cdata]);
+        $patch = $this->setPatch($data);
+        $res = $this->parent->save($data, $patch, $saveOpts);
       }
       if ($retBool)
       {
@@ -156,7 +146,7 @@ class Item extends \Lum\DB\Child
     }
     else
     { // Insert a new row.
-      $res = $this->parent->save($data);
+      $res = $this->parent->save($data, null, $saveOpts);
 
       if ($this->clear_on_insert)
       { // Clear the modified data.
@@ -183,6 +173,63 @@ class Item extends \Lum\DB\Child
   }
 
   /**
+   * Build a Mongo `$set` operator patch structure.
+   *
+   * You likely will never need to call this manually.
+   * It's used by the built-in `save()` method.
+   * You may want it if you override that method for whatever reason.
+   *
+   * @param ?BSONDocument $data Document to save (default: `null`)
+   *
+   * If `null` we will build it out of our internal data.
+   *
+   * @param array $opts Options
+   *
+   * - `update` (boolean, default: `true`)
+   *   Treat this as an update operation, which will clear the
+   *   list of modified data fields once it has completed.
+   *
+   * - `wrap` (boolean, default: `true`)
+   *   Wrap the output in the `["$set":$patch]` format.
+   *   Only disable this if you know what you are doing.
+   *
+   */
+  public function setPatch($data=null, $opts=[])
+  {
+    $isUpdate = $opts['update'] ?? true;
+    $wrapSet  = $opts['wrap']   ?? true;
+
+    if (!isset($data))
+    {
+      $data = $this->to_bson($opts);
+    }
+
+    $fields = array_keys($this->modified_data);
+#    error_log("<changed>".json_encode($fields)."</changed>");
+    $cdata  = [];
+    $fc = count($fields);
+    for ($i=0; $i< $fc; $i++)
+    {
+      $field = $fields[$i];
+#     error_log("<modified>$field</modified>");
+      if ($field == $pk) continue; // Sanity check.
+      $cdata[$field] = $data[$field];
+    }
+
+    if ($isUpdate && $this->clear_on_update)
+    { // Clear the modified data.
+      $this->modified_data = [];
+    }
+
+    if ($wrapSet)
+    { // Wrap the data in a Mongo '$set' op.
+      $cdata = ['$set'=>$cdata];
+    }
+
+    return $cdata;
+  }
+
+  /**
    * Apply MongoDB update statements directly.
    * This is not for general purpose usage.
    */
@@ -191,6 +238,7 @@ class Item extends \Lum\DB\Child
     $pk = $this->primary_key;
 
     $data = $this->to_bson($opts);
+    $saveOpts = $opts['model'] ?? $this->save_parent_opts;
 
     if (isset($this->save_update_timestamp_field) 
       && is_string($this->save_update_timestamp_field))
@@ -228,7 +276,7 @@ class Item extends \Lum\DB\Child
 
     if (isset($data[$pk]))
     {
-      $res = $this->parent->save($data, $updates);
+      $res = $this->parent->save($data, $updates, $saveOpts);
       return $this->return_updated($res, $opts);
     }
     else
@@ -271,8 +319,10 @@ class Item extends \Lum\DB\Child
       }
     }
 
+    $saveOpts = $opts['model'] ?? $this->save_parent_opts;
     $pk = $this->primary_key;
     $oldData = $this->to_bson($opts);
+
     if (isset($oldData[$pk]))
     {
       if (!isset($newData[$pk]))
@@ -280,7 +330,7 @@ class Item extends \Lum\DB\Child
         $newData[$pk] = $oldData[$pk];
       }
 
-      $res = $this->parent->save($newData);
+      $res = $this->parent->save($newData, null, $saveOpts);
       return $this->return_updated($res, $opts);
     }
     else 
