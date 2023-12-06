@@ -136,7 +136,7 @@ class Item extends \Lum\DB\Child
       }
       if ($retBool)
       {
-        return $this->parent->result_ok($res, true, true);
+        return ResultUtil::ok($res, true, true);
       }
       if ($retId)
       { // This is an odd request, but whatever.
@@ -153,8 +153,8 @@ class Item extends \Lum\DB\Child
         $this->modified_data = [];
       }
 
-      $newId = $this->parent->get_insert_id($res);
-      if ($newId)
+      $newId = ResultUtil::new_id($res);
+      if (isset($newId))
       {
         $this->data[$pk] = $newId;
       }
@@ -204,6 +204,7 @@ class Item extends \Lum\DB\Child
       $data = $this->to_bson($opts);
     }
 
+    $pk = $this->primary_key;
     $fields = array_keys($this->modified_data);
 #    error_log("<changed>".json_encode($fields)."</changed>");
     $cdata  = [];
@@ -345,7 +346,7 @@ class Item extends \Lum\DB\Child
       ? $opts['returnBoolean']
       : $this->save_return_boolean;
 
-    if ($this->parent->result_ok($results, true, true))
+    if (ResultUtil::ok($results, true, true))
     {
       $refresh = isset($opts['refresh']) ? $opts['refresh'] : true;
       if (is_array($refresh))
@@ -429,7 +430,7 @@ class Item extends \Lum\DB\Child
 
     if ($retBool)
     {
-      return $this->parent->deleted($res);
+      return ResultUtil::is_deleted($res);
     }
 
     return $res;

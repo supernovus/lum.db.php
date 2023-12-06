@@ -1,8 +1,8 @@
 <?php
 
 namespace Lum\DB\Mongo;
+
 use \MongoDB\BSON\ObjectId;
-use \MongoDB\{InsertOneResult, UpdateResult};
 
 /**
  * MongoDB base class for object models.
@@ -167,9 +167,47 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     }
   }
 
+  public function useObjectId(?string $field=null): bool
+  {
+    if (!$this->use_object_id)
+    { // No other checks are necessary.
+      return false;
+    }
+
+    if ($this->use_object_id === true)
+    { // The boolean true only affects the primary key.
+      if (is_null($field) || $field === $this->primary_key)
+      {
+        return true;
+      }
+      return false;
+    }
+
+    if (is_string($this->use_object_id))
+    { // A single field is being checked.
+      if (is_null($field))
+      { // Checking for the primary key alone.
+        return ($this->use_object_id === $this->primary_key);
+      }
+      return ($field === $this->use_object_id);
+    }
+
+    if (is_array($this->use_object_id))
+    { // An associative array of fields to use ObjectId.
+      if (is_null($field))
+      { // Check for primary key.
+        $field = $this->primary_key;
+      }
+      return in_array($field, $this->use_object_id, true);
+    }
+
+    // Nothing else matched. Bye bye!
+    return false;
+  }
+
   public function getDocById ($id, $findopts=[], $classopts=[])
   {
-    if ($this->use_object_id)
+    if ($this->useObjectId())
       $id = Util::objectId($id);
     $pk = $this->primary_key;
     return $this->findOne([$pk => $id], $findopts, $classopts);
@@ -181,7 +219,7 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     $data = $this->get_collection();
     if (isset($doc[$pk]))
     {
-      if ($this->use_object_id)
+      if ($this->useObjectId())
         $doc[$pk] = Util::objectId($doc[$pk]);
       $find = [$pk => $doc[$pk]];
       if (isset($update))
@@ -208,67 +246,36 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
   public function deleteId ($id)
   {
     $pk = $this->primary_key;
-    if ($this->use_object_id)
+    if ($this->useObjectId())
       $id = Util::objectId($id);
     $data = $this->get_collection();
     return $data->deleteOne([$pk => $id]);
   }
 
-  // Some helper routines, used in the Item class.
-
-  public function _results ($results, $isSave=false)
+  /** @deprecated Use ResultUtil::results() */
+  public function _results ($results, bool $isSave=false)
   {
-    if (isset($results))
-    {
-      if (is_object($results) && is_callable([$results, 'isAcknowledged']))
-      { // Output from a MongoDB write method.
-        return $results;
-      }
-      elseif ($isSave && is_array($results) && isset($results[1]) && is_object($results[1])
-        && is_callable([$results[1], 'isAcknowledged']))
-      { // Output from Model::save()
-        return $results[1];
-      }
-    }
+    return ResultUtil::results($results, $isSave);
   }
 
-  public function result_ok ($results, $unwrap=true, $isSave=false) :bool
+  /** @deprecated Use ResultUtil::ok() */
+  public function result_ok ($results, 
+    bool $unwrap=true, 
+    bool $isSave=false): bool
   {
-    if ($unwrap)
-    {
-      $results = $this->_results($results, $isSave);
-    }
-    if (isset($results))
-    {
-      return $results->isAcknowledged();
-    }
-    return false;
+    return ResultUtil::ok($results, $unwrap, $isSave);
   }
 
+  /** @deprecated Use ResultUtil::new_id() or ResultUtil::new_ids() */
   public function get_insert_id ($results)
   {
-    $results = $this->_results($results, true); // Unwrap first.
-    if (isset($results) && $this->result_ok($results, false))
-    {
-      if ($results instanceof InsertOneResult)
-      {
-        return $results->getInsertedId();
-      }
-      elseif ($results instanceof UpdateResult)
-      {
-        return $results->getUpsertedId();
-      }
-    }
+    return ResultUtil::new_id($results);
   }
 
+  /** @deprecated Use ResultUtil::is_deleted() */
   public function deleted ($results) :bool
   {
-    if ($this->result_ok($results))
-    {
-      $count = $results->getDeletedCount();
-      return ($count > 0);
-    }
-    return false;
+    return ResultUtil::is_deleted($results);
   }
 
   // Iterator interface

@@ -188,4 +188,12 @@ class Util
       || (is_array($what) && array_is_list($what)));
   }
 
+  static function canObjectId($id): bool
+  {
+    return ($id instanceof ObjectId
+      || (static::isAssoc($id) && is_string($id['$oid']))
+      || (is_string($id) && ctype_xdigit($id))
+    );
+  }
+
 }

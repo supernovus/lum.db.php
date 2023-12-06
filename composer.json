@@ -13,11 +13,11 @@
   "require":
   {
     "lum/lum-core": "^3.0",
-    "lum/lum-data": "^1.0"
+    "lum/lum-data": "^1.1"
   },
   "require-dev":
   {
-    "lum/lum-test": "^3.0",
+    "lum/lum-test": "^3.1",
     "ext-PDO": "*"
   },
   "suggest":
