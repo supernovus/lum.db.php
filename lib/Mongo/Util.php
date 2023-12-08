@@ -176,6 +176,14 @@ class Util
     }
   }
 
+  static function isSame($first, $second): bool
+  {
+    if ($first === $second) return true;
+    $id1 = static::idString($first);
+    $id2 = static::idString($second);
+    return ($id1 === $id2);
+  }
+
   static function isAssoc ($what): bool
   {
     return (($what instanceof BSONDocument)
