@@ -213,6 +213,14 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
     return $this->findOne([$pk => $id], $findopts, $classopts);
   }
 
+  public function idCount($id, $findopts=[])
+  {
+    if ($this->useObjectId())
+      $id = Util::objectId($id);
+    $pk = $this->primary_key;
+    return $this->rowCount([$pk => $id], $findopts);
+  }
+
   public function save ($doc, $update=null, $options=[])
   {
     $pk = $this->primary_key;
@@ -315,18 +323,16 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
 
   public function offsetExists ($offset): bool
   {
-    $doc = $this->getDocById($offset);
-    if ($doc)
-      return true;
-    return false;
+    return boolval($this->idCount($offset));
   }
 
   public function offsetSet ($offset, $doc): void
   {
     $pk = $this->primary_key;
     $id = new ObjectId($offset);
-    $doc->$pk = $id;
-    if (is_callable([$doc, 'save']))
+    $doc[$pk] = $id;
+
+    if (is_object($doc) && is_callable([$doc, 'save']))
       $doc->save();
     else
       $this->save($doc);
