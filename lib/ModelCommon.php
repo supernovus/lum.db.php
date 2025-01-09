@@ -90,7 +90,7 @@ trait ModelCommon
           $default = $val;
         }
 
-        if (array_key_exists($field, $data))
+        if (isset($data[$field]))
         { // Field was found, next!
           continue;
         }
